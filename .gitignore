@@ -1,0 +1,57 @@
+# Specific Folders
+TravelAround.Ai/
+
+# Dependencies
+node_modules/
+/.pnp
+.pnp.js
+
+# Environment Variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+server/.env
+client/.env
+
+# Production / Build outputs
+dist/
+dist-ssr/
+build/
+*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+[Tt]humbs.db
+[Ee]xthumbs.db
+
+# Testing & Coverage
+coverage/
+*.lcov
+.nyc_output/
+
+# Cache
+.cache/
+.eslintcache
