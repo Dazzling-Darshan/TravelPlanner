@@ -13,8 +13,7 @@ const Register = () => {
     });
 
     const [searchParams] = useSearchParams();
-    const initialRole = "user";
-    const [role, setRole] = useState(initialRole);
+    const [role, setRole] = useState(() => searchParams.get("role") === "organiser" ? "organiser" : "user");
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -31,12 +30,6 @@ const Register = () => {
             }
         }
     }, [user, authLoading, navigate]);
-
-    useEffect(() => {
-        const urlRole = searchParams.get("role");
-        if (urlRole === "organiser") setRole("organiser");
-        else setRole("user");
-    }, [searchParams]);
 
     const handleChange = (e) => {
         setCredentials((prev) => ({ ...prev, [e.target.id]: e.target.value }));

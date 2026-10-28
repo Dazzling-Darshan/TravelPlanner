@@ -3,21 +3,21 @@ import { Button } from "../ui/button";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
+const SLIDES = [
+    "/hero-slider-1.png",
+    "/hero-nature.png",
+    "/hero-landscape.png",
+    "/cta-bg.png"
+];
+
 export default function Hero() {
     const { user } = useAuth();
     const navigate = useNavigate();
     const [currentSlide, setCurrentSlide] = useState(0);
 
-    const slides = [
-        "/hero-slider-1.png",
-        "/hero-nature.png",
-        "/hero-landscape.png",
-        "/cta-bg.png"
-    ];
-
     useEffect(() => {
         const timer = setInterval(() => {
-            setCurrentSlide((prev) => (prev + 1) % slides.length);
+            setCurrentSlide((prev) => (prev + 1) % SLIDES.length);
         }, 5000); // Change image every 5 seconds
         return () => clearInterval(timer);
     }, []);
@@ -30,7 +30,7 @@ export default function Hero() {
                 {/* Overlay for consistency and tone */}
                 <div className="absolute inset-0 bg-black/40 z-10"></div>
 
-                {slides.map((slide, index) => (
+                {SLIDES.map((slide, index) => (
                     <div
                         key={index}
                         className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentSlide ? "opacity-100" : "opacity-0"
@@ -89,7 +89,7 @@ export default function Hero() {
 
                 {/* Progress Indicators */}
                 <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-30">
-                    {slides.map((_, index) => (
+                    {SLIDES.map((_, index) => (
                         <div
                             key={index}
                             className={`h-1 transition-all duration-300 ${index === currentSlide ? "w-8 bg-white" : "w-4 bg-white/30"

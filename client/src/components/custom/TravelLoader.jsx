@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Globe } from 'lucide-react';
+
+const STATUSES = [
+    "Analyzing preferences",
+    "Curating adventure",
+    "Syncing itineraries",
+    "Finalizing plan"
+];
 
 const TravelLoader = () => {
     const [statusIndex, setStatusIndex] = useState(0);
-    const statuses = [
-        "Analyzing preferences",
-        "Curating adventure",
-        "Syncing itineraries",
-        "Finalizing plan"
-    ];
 
     useEffect(() => {
         const interval = setInterval(() => {
-            setStatusIndex((prev) => (prev + 1) % statuses.length);
+            setStatusIndex((prev) => (prev + 1) % STATUSES.length);
         }, 2000);
         return () => clearInterval(interval);
     }, []);
@@ -47,7 +47,7 @@ const TravelLoader = () => {
                 <div className="flex flex-col items-center gap-4 text-center">
                     <div className="h-6 flex items-center justify-center">
                         <p className="text-[12px] font-black uppercase tracking-[0.5em] text-white/90 animate-fade-in-out">
-                            {statuses[statusIndex]}
+                            {STATUSES[statusIndex]}
                         </p>
                     </div>
                     <div className="flex items-center gap-3">

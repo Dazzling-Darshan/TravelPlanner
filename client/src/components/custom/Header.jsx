@@ -17,47 +17,46 @@ function Header() {
 
     // Refresh user data on mount to sync roles
     useEffect(() => {
-        if (user) {
+        if (user && checkAuth) {
             checkAuth();
         }
-    }, []);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Notifications State
     const [notifications, setNotifications] = useState([]);
-    const [socket, setSocket] = useState(null);
 
     // Fetch Notifications on load
     useEffect(() => {
-        if (user) {
-            fetchNotifications();
+        if (!user) return;
 
-            // Connect Socket
-            const socketUrl = import.meta.env.PROD ? window.location.origin : "http://localhost:5000";
-            const newSocket = io(socketUrl, {
-                withCredentials: true
-            });
-            setSocket(newSocket);
-
-            newSocket.on(`notification_${user.id}`, (newNotif) => {
-                setNotifications(prev => [newNotif, ...prev]);
-                toast({
-                    title: "New Notification",
-                    description: newNotif.message,
-                });
+        let isMounted = true;
+        api.get('/notifications')
+            .then(({ data }) => {
+                if (isMounted) setNotifications(data);
+            })
+            .catch((error) => {
+                console.error("Failed to fetch notifications", error);
             });
 
-            return () => newSocket.disconnect();
-        }
-    }, [user]);
+        // Connect Socket
+        const socketUrl = import.meta.env.PROD ? window.location.origin : "http://localhost:5000";
+        const newSocket = io(socketUrl, {
+            withCredentials: true
+        });
 
-    const fetchNotifications = async () => {
-        try {
-            const { data } = await api.get('/notifications');
-            setNotifications(data);
-        } catch (error) {
-            console.error("Failed to fetch notifications", error);
-        }
-    };
+        newSocket.on(`notification_${user.id}`, (newNotif) => {
+            setNotifications(prev => [newNotif, ...prev]);
+            toast({
+                title: "New Notification",
+                description: newNotif.message,
+            });
+        });
+
+        return () => {
+            isMounted = false;
+            newSocket.disconnect();
+        };
+    }, [user, toast]);
 
     const handleMarkRead = async (id) => {
         try {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { Loader2, MapPin } from 'lucide-react'
 
 function NominatimAutocomplete({ onChange }) {

@@ -1,26 +1,25 @@
 // components/DetailModal.jsx
 import React, { useState, useEffect } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { Navigation, Pagination, Thumbs } from 'swiper/modules';
+import { Navigation, Pagination } from 'swiper/modules';
 import { 
-  X, MapPin, Star, Clock, DollarSign, Users, Wifi, Car, 
-  Utensils, Heart, Share2, Calendar, Phone, Globe, 
-  ChevronLeft, ChevronRight, Maximize2, CheckCircle,
-  Navigation as NavigationIcon, Info, BookOpen
+  X, MapPin, Star, Users, Wifi, Car, 
+  Utensils, Heart, Share2
 } from 'lucide-react';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
-import 'swiper/css/thumbs';
 import { Toggle } from "@/components/ui/toggle"
 
 
 const DetailModal = ({ isOpen, onClose, data, isHotel = true }) => {
-  const [thumbsSwiper, setThumbsSwiper] = useState(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [imageArray, setImageArray] = useState([]);
   const [isLiked, setIsLiked] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+
+  const images = (Array.isArray(data?.images) && data.images.length > 0)
+    ? data.images
+    : [data?.image || data?.photoUrl || data?.imageUrl || '/hero-nature.png'];
 
   useEffect(() => {
     if (isOpen) {
@@ -69,16 +68,15 @@ const DetailModal = ({ isOpen, onClose, data, isHotel = true }) => {
         {/* Image Gallery */}
         <div className="relative h-96 bg-gray-900">
           <Swiper
-            modules={[Navigation, Pagination, Thumbs]}
+            modules={[Navigation, Pagination]}
             spaceBetween={0}
             slidesPerView={1}
             navigation
             pagination={{ clickable: true }}
-            thumbs={{ swiper: thumbsSwiper }}
             onSlideChange={(swiper) => setActiveImageIndex(swiper.activeIndex)}
             className="h-full"
           >
-            {imageArray.map((img, idx) => (
+            {images.map((img, idx) => (
               <SwiperSlide key={idx}>
                 <img 
                   src={img} 
@@ -92,7 +90,7 @@ const DetailModal = ({ isOpen, onClose, data, isHotel = true }) => {
           
           {/* Image Counter */}
           <div className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-sm px-3 py-1 rounded-full text-white text-sm">
-            {activeImageIndex + 1} / {imageArray.length}
+            {activeImageIndex + 1} / {images.length}
           </div>
         </div>
 

@@ -1,8 +1,8 @@
 // Enhanced AIModel.js
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import axios from 'axios';
 
-const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GOOGLE_GEMINI_AI_API_KEY);
+const apiKey = import.meta.env.VITE_GOOGLE_GEMINI_AI_API_KEY || "";
+const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
 
 // --- 1. ENHANCED Geocoding (with place type details) ---
 async function geocodeLocation(location) {
@@ -39,7 +39,7 @@ async function fetchPlaceImage(query, location, type) {
     // LoremFlickr is a more reliable alternative to the deprecated Unsplash source redirect
     const imageUrl = `https://loremflickr.com/800/600/${encodeURIComponent(searchQuery.toLowerCase())}`;
     return imageUrl;
-  } catch (error) {
+  } catch {
     // Ultimate fallback
     return `https://picsum.photos/800/600?random=${Math.random()}`;
   }
@@ -321,6 +321,9 @@ async function createSmartItinerary(places, hotels, days, location, traveler, bu
   `;
 
   try {
+    if (!genAI) {
+      throw new Error("Gemini API key not configured");
+    }
     // UPDATED MODEL NAME
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     const result = await model.generateContent(prompt);

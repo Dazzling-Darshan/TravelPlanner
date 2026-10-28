@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { Clock, ChevronRight, ChevronDown, DollarSign, Compass, Navigation } from 'lucide-react';
+import { Clock, ChevronRight, ChevronDown, Compass, Navigation } from 'lucide-react';
 
 const ItinerarySection = ({ itinerary, tripHotelName }) => {
   const [expandedDays, setExpandedDays] = useState({ 0: true }); // Expand first day by default
-  const [likedPlaces, setLikedPlaces] = useState({});
 
-  const PlaceCard = ({ place, placeIndex, isLast, dayIndex }) => {
+  const PlaceCard = ({ place, placeIndex, isLast }) => {
     return (
       <div className="relative pl-6 md:pl-8 pb-4 group/place">
         {/* Very Simple Timeline */}
@@ -124,7 +123,6 @@ const ItinerarySection = ({ itinerary, tripHotelName }) => {
                     place={place}
                     placeIndex={placeIndex}
                     isLast={placeIndex === dayPlan.places.length - 1}
-                    dayIndex={dayIndex}
                   />
                 ))}
 

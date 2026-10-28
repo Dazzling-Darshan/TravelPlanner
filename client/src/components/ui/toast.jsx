@@ -78,12 +78,12 @@ export function ToastProvider({ children }) {
               "--index": index,
             }}
           >
-            <p className="font-medium text-gray-900">
+            <p className={`font-medium ${t.type ? 'text-white' : 'text-gray-900'}`}>
               {t.title}
             </p>
 
             {t.description && (
-              <p className="text-sm text-gray-600">
+              <p className={`text-sm ${t.type ? 'text-white/90' : 'text-gray-600'}`}>
                 {t.description}
               </p>
             )}

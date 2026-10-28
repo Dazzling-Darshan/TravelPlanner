@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, MapPin, Star, Clock, Calendar,
-  Shield, CheckCircle, Navigation,
-  Hotel, Map, Clock3, DollarSign, Users, MessageSquare, Tag, AlertCircle, Share2, Info, LayoutGrid, List, Zap, Globe, ArrowRight
+  ArrowLeft, MapPin, Star, Clock,
+  CheckCircle,
+  Users, MessageSquare, Tag, AlertCircle, Share2, Info, LayoutGrid, List, Globe, ArrowRight
 } from 'lucide-react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation as SwiperNav, Pagination, Autoplay } from 'swiper/modules';
@@ -57,36 +57,42 @@ const ViewDetails = () => {
 
   useEffect(() => {
     if (!hotel) {
-      setTimeout(() => setLoading(false), 800);
-    } else {
-      if (user) checkBookingStatus();
-      if (tripId && typeof tripId === 'string' && tripId.length >= 24) {
-        fetchTripAndMembers();
-      }
+      const timer = setTimeout(() => setLoading(false), 800);
+      return () => clearTimeout(timer);
     }
-  }, [hotel, user, tripId]);
 
-  const fetchTripAndMembers = async () => {
-    try {
-      const [tripRes, membersRes] = await Promise.all([
+    let isMounted = true;
+
+    if (user) {
+      api.get(`/bookings/status/${encodeURIComponent(destinationName)}`)
+        .then(({ data }) => {
+          if (isMounted && data?.status) setBookingStatus(data.status);
+        })
+        .catch((error) => {
+          console.error("Status validation failed", error);
+        });
+    }
+
+    if (tripId && typeof tripId === 'string' && tripId.length >= 24) {
+      Promise.all([
         api.get(`/trips/${tripId}`),
         api.get(`/bookings/trip/${tripId}/members`)
-      ]);
-      setTripData(tripRes.data);
-      setMembers(membersRes.data);
-    } catch (err) {
-      console.error("Context retrieval failed", err);
+      ])
+        .then(([tripRes, membersRes]) => {
+          if (isMounted) {
+            setTripData(tripRes.data);
+            setMembers(membersRes.data);
+          }
+        })
+        .catch((err) => {
+          console.error("Context retrieval failed", err);
+        });
     }
-  };
 
-  const checkBookingStatus = async () => {
-    try {
-      const { data } = await api.get(`/bookings/status/${encodeURIComponent(destinationName)}`);
-      if (data?.status) setBookingStatus(data.status);
-    } catch (error) {
-      console.error("Status validation failed", error);
-    }
-  };
+    return () => {
+      isMounted = false;
+    };
+  }, [hotel, user, tripId, destinationName]);
 
   const handleJoinTrip = () => {
     if (!user) {

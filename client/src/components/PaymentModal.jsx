@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
-import { CreditCard, Lock, CheckCircle, Loader2, X } from 'lucide-react';
+import { CreditCard, Lock, CheckCircle, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
 import {
     Dialog,
     DialogContent,
-    DialogDescription,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
 } from "./ui/dialog";
 
 const PaymentModal = ({ isOpen, onClose, onSuccess, amount, itemName }) => {
@@ -69,6 +67,7 @@ const PaymentModal = ({ isOpen, onClose, onSuccess, amount, itemName }) => {
 
                             <Button
                                 onClick={handlePayment}
+                                disabled={loading}
                                 className="w-full h-12 text-lg bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-200"
                             >
                                 <CreditCard className="w-5 h-5 mr-2" />

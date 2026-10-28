@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, Autoplay } from 'swiper/modules';
-import { MapPin, Star, Clock, Search, CheckCircle } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import { useNavigate } from "react-router-dom";
 import 'swiper/css';
 import 'swiper/css/navigation';
@@ -9,7 +9,6 @@ import 'swiper/css/pagination';
 import 'swiper/css/autoplay';
 
 const TripCard = ({ hotel, isHotel = true, tripId, tripHotelName, isSelected = false, onSelect = null, isOrganiser = false }) => {
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [imageArray, setImageArray] = useState([]);
   const navigate = useNavigate();
 
@@ -50,7 +49,7 @@ const TripCard = ({ hotel, isHotel = true, tripId, tripHotelName, isSelected = f
     generateImages();
   }, [hotel, isHotel]);
 
-  const handleImageError = (e, index) => {
+  const handleImageError = (e) => {
     e.target.src = isHotel
       ? 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&auto=format&fit=crop&q=80'
       : 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800&auto=format&fit=crop&q=80';
@@ -84,7 +83,6 @@ const TripCard = ({ hotel, isHotel = true, tripId, tripHotelName, isSelected = f
             slidesPerView={1}
             pagination={{ clickable: true, dynamicBullets: true }}
             autoplay={{ delay: 4000, disableOnInteraction: false }}
-            onSlideChange={(swiper) => setActiveImageIndex(swiper.activeIndex)}
             className="h-full"
           >
             {imageArray.map((img, idx) => (
@@ -93,7 +91,7 @@ const TripCard = ({ hotel, isHotel = true, tripId, tripHotelName, isSelected = f
                   src={img}
                   alt={`${hotel.hotelName || hotel.placeName || 'Destination'} - Image ${idx + 1}`}
                   className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
-                  onError={(e) => handleImageError(e, idx)}
+                  onError={handleImageError}
                   loading="lazy"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-transparent opacity-80"></div>

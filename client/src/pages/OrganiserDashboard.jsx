@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard, Users, Map, MessageSquare,
@@ -35,15 +35,7 @@ const OrganiserDashboard = () => {
         endDate: ''
     });
 
-    useEffect(() => {
-        if (!user || (user.role !== 'organiser' && user.role !== 'admin')) {
-            navigate('/');
-            return;
-        }
-        fetchOrganiserData();
-    }, [user, navigate]);
-
-    const fetchOrganiserData = async () => {
+    const fetchOrganiserData = useCallback(async () => {
         setLoading(true);
         try {
             const [tripsRes, requestsRes] = await Promise.all([
@@ -58,7 +50,15 @@ const OrganiserDashboard = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [toast]);
+
+    useEffect(() => {
+        if (!user || (user.role !== 'organiser' && user.role !== 'admin')) {
+            navigate('/');
+            return;
+        }
+        fetchOrganiserData();
+    }, [user, navigate, fetchOrganiserData]);
 
     const handleRequestAction = async (requestId, status) => {
         try {
@@ -76,7 +76,7 @@ const OrganiserDashboard = () => {
             await api.delete(`/trips/${id}`);
             toast({ title: "Purged", description: "Trip deleted successfully" });
             fetchOrganiserData();
-        } catch (err) {
+        } catch {
             toast({ title: "Error", description: "Failed to delete trip", variant: "destructive" });
         }
     };
@@ -105,7 +105,7 @@ const OrganiserDashboard = () => {
             toast({ title: "Synchronized", description: "Trip parameters updated successfully" });
             setEditingTrip(null);
             fetchOrganiserData();
-        } catch (err) {
+        } catch {
             toast({ title: "Error", description: "Failed to update trip", variant: "destructive" });
         }
     };
@@ -333,11 +333,14 @@ const OrganiserDashboard = () => {
                                                 ))}
                                             </div>
                                             <div className="flex gap-2">
-                                                <button onClick={() => navigate(`/view-trip/${trip._id}`)} className="p-2 bg-white/5 hover:bg-white text-gray-500 hover:text-black transition-all rounded-sm">
+                                                <button onClick={() => navigate(`/view-trip/${trip._id}`)} className="p-2 bg-white/5 hover:bg-white text-gray-500 hover:text-black transition-all rounded-sm" title="View Trip">
                                                     <ArrowUpRight className="w-4 h-4" />
                                                 </button>
-                                                <button onClick={() => openEditModal(trip)} className="p-2 bg-white/5 hover:bg-white text-gray-500 hover:text-black transition-all rounded-sm">
+                                                <button onClick={() => openEditModal(trip)} className="p-2 bg-white/5 hover:bg-white text-gray-500 hover:text-black transition-all rounded-sm" title="Edit Trip">
                                                     <Edit className="w-4 h-4" />
+                                                </button>
+                                                <button onClick={() => handleDeleteTrip(trip._id)} className="p-2 bg-white/5 hover:bg-red-500 hover:text-white text-gray-500 transition-all rounded-sm" title="Delete Trip">
+                                                    <Trash2 className="w-4 h-4" />
                                                 </button>
                                             </div>
                                         </div>

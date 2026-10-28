@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Send, User, Users, MessageSquare, Image as ImageIcon, Smile, X, Paperclip, Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Send, User, Users, Image as ImageIcon, Smile, X, Paperclip, Loader2 } from 'lucide-react';
 import api from '../../service/api';
 import { useAuth } from '../../context/AuthContext';
 import EmojiPicker from 'emoji-picker-react';
@@ -22,7 +22,7 @@ const GroupChat = ({ destination, onClose }) => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
 
-    const fetchMessages = async () => {
+    const fetchMessages = useCallback(async () => {
         try {
             const { data } = await api.get(`/chat/${encodeURIComponent(destination)}`);
             setMessages(data);
@@ -30,23 +30,23 @@ const GroupChat = ({ destination, onClose }) => {
         } catch (error) {
             console.error("Failed to load chat", error);
         }
-    };
+    }, [destination]);
 
-    const fetchBuddies = async () => {
+    const fetchBuddies = useCallback(async () => {
         try {
             const { data } = await api.get(`/chat/${encodeURIComponent(destination)}/buddies`);
             setBuddies(data);
         } catch (error) {
             console.error("Failed to load buddies", error);
         }
-    };
+    }, [destination]);
 
     useEffect(() => {
         fetchMessages();
         fetchBuddies();
         intervalRef.current = setInterval(fetchMessages, 3000);
         return () => clearInterval(intervalRef.current);
-    }, [destination]);
+    }, [destination, fetchMessages, fetchBuddies]);
 
     useEffect(() => {
         scrollToBottom();

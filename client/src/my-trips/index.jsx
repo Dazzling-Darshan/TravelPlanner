@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import api from '../service/api'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { Calendar, Trash2, MapPin } from 'lucide-react'
 
 function MyTrips() {
@@ -10,7 +10,6 @@ function MyTrips() {
     const [bookings, setBookings] = useState([])
     const [creatorRequests, setCreatorRequests] = useState([])
     const [loading, setLoading] = useState(true)
-    const navigate = useNavigate();
 
     useEffect(() => {
         const fetchData = async () => {

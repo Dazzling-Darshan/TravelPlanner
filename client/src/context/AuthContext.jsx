@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useReducer } from "react";
 import api from "../service/api";
 
@@ -57,7 +58,7 @@ export const AuthContextProvider = ({ children }) => {
         try {
             const res = await api.get('/auth/me');
             dispatch({ type: "LOGIN_SUCCESS", payload: res.data.user });
-        } catch (err) {
+        } catch {
             // Not authenticated or error
             dispatch({ type: "LOGOUT" });
         }

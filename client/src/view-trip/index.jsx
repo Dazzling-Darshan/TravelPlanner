@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { MapPin, Star, Clock, Calendar, Navigation, Globe, Share2, Users, Shield, CheckCircle, MessageCircle, Zap, Compass, Sparkles, UserX, Trash2 } from "lucide-react";
 import TripCard from "../components/ui/TripCard";
@@ -17,7 +17,6 @@ export default function ViewTrip() {
   const { user } = useAuth();
   const [bookingStatus, setBookingStatus] = useState('none');
   const [showTripDetails, setShowTripDetails] = useState(false);
-  const [userBooking, setUserBooking] = useState(null);
   const [members, setMembers] = useState([]);
   const [tripOwnerId, setTripOwnerId] = useState(null);
 
@@ -67,7 +66,7 @@ export default function ViewTrip() {
     fetchTrip();
   }, [id, toast]);
 
-  const fetchMembers = async () => {
+  const fetchMembers = useCallback(async () => {
     if (!id) return;
     try {
       const membersRes = await api.get(`/bookings/trip/${id}/members`);
@@ -88,34 +87,33 @@ export default function ViewTrip() {
     } catch (error) {
       console.error("Error fetching members:", error);
     }
-  };
-
-  useEffect(() => {
-    fetchMembers();
   }, [id]);
 
-  useEffect(() => {
-    if (trip && user) {
-      checkBookingStatus();
-    }
-  }, [trip, user]);
-
-  const checkBookingStatus = async () => {
+  const checkBookingStatus = useCallback(async () => {
     try {
       const { data } = await api.get(`/bookings/status/id/${id}`);
       if (data) {
         const tripRes = await api.get(`/trips/${id}`);
-        if (tripRes.data?.userId === user.id) {
+        if (tripRes.data?.userId === user?.id) {
           setBookingStatus('approved');
         } else {
           setBookingStatus(data.status || 'none');
-          setUserBooking(data._id ? data : null);
         }
       }
     } catch (error) {
       console.error("Failed to check status", error);
     }
-  };
+  }, [id, user?.id]);
+
+  useEffect(() => {
+    fetchMembers();
+  }, [fetchMembers]);
+
+  useEffect(() => {
+    if (trip && user) {
+      checkBookingStatus();
+    }
+  }, [trip, user, checkBookingStatus]);
 
   const handleJoinTrip = async () => {
     try {
@@ -468,7 +466,7 @@ export default function ViewTrip() {
                         description: isDeselect ? "Removed from itinerary highlight." : "This hotel is now marked as booked for all users.",
                         className: "bg-[#0a0a0a] text-white border-white/20"
                       });
-                    } catch (err) {
+                    } catch {
                       toast({ title: "Error", description: "Failed to update hotel selection.", variant: "destructive" });
                     }
                   }}

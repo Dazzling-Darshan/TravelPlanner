@@ -1,17 +1,14 @@
 import React from 'react';
-import { Bell, Check, ExternalLink } from 'lucide-react';
+import { Bell } from 'lucide-react';
 import {
     DropdownMenu,
     DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Button } from './ui/button';
 import { ScrollArea } from './ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
-import api from '../service/api';
 
 const NotificationDropdown = ({ notifications, onMarkRead, onMarkAllRead }) => {
     const navigate = useNavigate();

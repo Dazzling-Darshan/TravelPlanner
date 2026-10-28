@@ -3,8 +3,10 @@ import api from '../service/api';
 import UserTripCard from '../components/ui/UserTripCard';
 import TripFilters from '../components/custom/TripFilters';
 import { Loader2, Globe } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const Explore = () => {
+    const { user } = useAuth();
     const [trips, setTrips] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filters, setFilters] = useState({
@@ -30,7 +32,7 @@ const Explore = () => {
                 setTrips(res.data);
 
                 // Fetch user bookings if logged in
-                if (localStorage.getItem('token')) {
+                if (user) {
                     const bookingsRes = await api.get('/bookings/user-bookings');
                     setUserBookings(bookingsRes.data);
                 }
@@ -47,7 +49,7 @@ const Explore = () => {
         }, 500);
 
         return () => clearTimeout(timeoutId);
-    }, [filters]);
+    }, [filters, user]);
 
     return (
         <div className="px-4 md:px-16 lg:px-24 py-16 bg-[#050505] min-h-screen text-white">
