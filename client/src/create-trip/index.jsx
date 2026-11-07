@@ -72,13 +72,15 @@ function CreateTrip() {
 
       if (!tripData || !Array.isArray(tripData.hotels)) throw new Error("AI generation failed. Please try again.");
 
+      const isOrganiser = user?.role === 'organiser';
       const saveResponse = await api.post('/trips', {
         destination: fullLocationName,
         tripData: tripData,
         duration: formData.noOfDays,
         budget: formData.budget,
-        price: formData.price || 0,
-        requestOrganiser: formData.requestOrganiser || false,
+        price: isOrganiser ? (formData.price || 0) : 0,
+        isPublic: isOrganiser && Boolean(formData.requestOrganiser),
+        requestOrganiser: isOrganiser ? Boolean(formData.requestOrganiser) : false,
         startDate: formData.startDate,
         endDate: formData.endDate
       });

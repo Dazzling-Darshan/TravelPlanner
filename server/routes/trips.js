@@ -16,17 +16,24 @@ router.post("/", verifyToken, async (req, res) => {
     try {
         const { tripData, destination, duration, budget, capacity, price, requestOrganiser, startDate, endDate } = req.body;
 
+        // Fetch fresh user data to enforce role-based privacy rules
+        const currentUser = await User.findById(req.user.id);
+        const isOrganiser = currentUser?.role === "organiser";
+
+        // Normal users (Travelers) are strictly private. Only organisers can have public trips.
+        const isPublic = isOrganiser && (req.body.isPublic !== undefined ? Boolean(req.body.isPublic) : true);
+
         const newTrip = new Trip({
             userId: req.user.id,
             tripData,
             destination,
             duration,
             budget,
-            capacity: capacity || 10,
-            price,
+            capacity: isOrganiser ? (capacity || 10) : 1,
+            price: isOrganiser ? (price || 0) : 0,
             status: "approved", // Auto-approve as Admin is removed
-            isPublic: req.body.isPublic !== undefined ? req.body.isPublic : true,
-            requestOrganiser: requestOrganiser || false,
+            isPublic: isPublic,
+            requestOrganiser: isOrganiser ? (requestOrganiser || false) : false,
             startDate,
             endDate
         });
@@ -48,11 +55,20 @@ router.get("/user-trips", verifyToken, async (req, res) => {
     }
 });
 
-// GET ALL APPROVED TRIPS (SEARCH/FILTER) - Public
+// GET ALL APPROVED TRIPS (SEARCH/FILTER) - Public (Organiser Trips Only)
 router.get("/", async (req, res) => {
     try {
         const { query, minDays, maxDays, budget } = req.query;
-        let filter = { isPublic: true, status: "approved" }; // Only approved trips
+
+        // Strictly query trips created by organisers that are public and approved
+        const organisers = await User.find({ role: "organiser" }).select("_id");
+        const organiserIds = organisers.map(o => o._id);
+
+        let filter = {
+            isPublic: true,
+            status: "approved",
+            userId: { $in: organiserIds }
+        };
 
         if (query) {
             filter.destination = { $regex: query, $options: "i" };
@@ -66,7 +82,10 @@ router.get("/", async (req, res) => {
             filter.budget = budget;
         }
 
-        const trips = await Trip.find(filter).sort({ createdAt: -1 });
+        const trips = await Trip.find(filter)
+            .populate('userId', 'username avatar role')
+            .sort({ createdAt: -1 });
+
         res.status(200).json(trips);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -89,17 +108,27 @@ router.put("/:id", verifyToken, async (req, res) => {
             return res.status(403).json({ message: "Unauthorized: You don't own this trip" });
         }
 
+        const currentUser = await User.findById(req.user.id);
+        const isOrganiser = currentUser?.role === 'organiser';
+
         // Update fields if provided
         if (destination) trip.destination = destination;
         if (budget) trip.budget = budget;
         if (duration) trip.duration = Number(duration);
-        if (capacity) trip.capacity = Number(capacity);
-        if (price !== undefined) trip.price = Number(price);
+        if (capacity && isOrganiser) trip.capacity = Number(capacity);
+        if (price !== undefined && isOrganiser) trip.price = Number(price);
         if (status) trip.status = status;
         if (terms) trip.terms = terms;
         if (packageNotes) trip.packageNotes = packageNotes;
         if (isBooked !== undefined) trip.isBooked = isBooked;
-        if (isPublic !== undefined) trip.isPublic = isPublic;
+
+        // Privacy rule: Only organisers can set a trip to public. Travelers' personal trips remain private.
+        if (isPublic !== undefined) {
+            trip.isPublic = isOrganiser ? Boolean(isPublic) : false;
+        } else if (!isOrganiser) {
+            trip.isPublic = false;
+        }
+
         if (selectedHotel !== undefined) trip.selectedHotel = selectedHotel;
         if (startDate) trip.startDate = startDate;
         if (endDate) trip.endDate = endDate;
@@ -111,7 +140,7 @@ router.put("/:id", verifyToken, async (req, res) => {
     }
 });
 
-// GET TRIP BY ID (PUBLIC/SHARED)
+// GET TRIP BY ID (PUBLIC FOR ORGANISER TRIPS, OWNER/MEMBER ONLY FOR PRIVATE TRIPS)
 router.get("/:id", async (req, res) => {
     const { id } = req.params;
 
@@ -122,10 +151,36 @@ router.get("/:id", async (req, res) => {
     }
 
     try {
-        const trip = await Trip.findById(id);
+        const trip = await Trip.findById(id).populate('userId', 'username email avatar role');
         if (!trip) {
             console.warn(`[GET_TRIP] Trip ${id} not found`);
             return res.status(404).json({ message: "Trip not found" });
+        }
+
+        const tripCreatorRole = trip.userId?.role;
+        const isPublicOrganiserTrip = trip.isPublic && tripCreatorRole === 'organiser';
+
+        // If this is a private trip (e.g., traveler's personal trip), enforce authorization
+        if (!isPublicOrganiserTrip) {
+            const currentUserId = req.session?.user?.id;
+            if (!currentUserId) {
+                return res.status(401).json({ message: "Authentication required to view this private trip." });
+            }
+
+            const tripOwnerId = trip.userId?._id ? trip.userId._id.toString() : trip.userId.toString();
+            const isOwner = tripOwnerId === currentUserId.toString();
+
+            if (!isOwner) {
+                const isApprovedMember = await Booking.findOne({
+                    tripId: trip._id,
+                    userId: currentUserId,
+                    status: "approved"
+                });
+
+                if (!isApprovedMember) {
+                    return res.status(403).json({ message: "Access denied: This trip is private." });
+                }
+            }
         }
 
         res.status(200).json(trip);

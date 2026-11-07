@@ -72,13 +72,13 @@ function MyTrips() {
                         </h1>
                     </div>
 
-                    {(user?.role === 'organiser' || user?.role === 'admin') && (
+                    {(user?.role === 'organiser' || user?.role === 'admin' || trips.length > 0) && (
                         <Link
-                            to={user.role === 'admin' ? "/admin" : "/organiser"}
+                            to={user?.role === 'admin' ? "/admin" : "/organiser"}
                             className='inline-flex items-center justify-center gap-2 px-6 h-12 bg-white text-black rounded-lg font-inter font-bold hover:bg-gray-200 transition-colors shadow-sm'
                         >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
-                            Go to {user.role === 'admin' ? 'Admin' : 'Organiser'} Panel
+                            Go to Management Panel
                         </Link>
                     )}
                 </div>
@@ -106,12 +106,9 @@ function MyTrips() {
                                                 }}
                                             />
                                             {/* Status Badge */}
-                                            <div className='absolute bottom-2 left-2 z-20'>
-                                                <span className={`px-2.5 py-1 rounded-md text-[9px] font-urbanist font-bold uppercase tracking-widest ${trip.status === 'approved' ? 'bg-white/10 backdrop-blur-md border border-white/20 text-white' :
-                                                    trip.status === 'rejected' ? 'bg-red-500/20 backdrop-blur-md border border-red-500/30 text-red-200' :
-                                                        'bg-amber-500/20 backdrop-blur-md border border-amber-500/30 text-amber-200'
-                                                    }`}>
-                                                    {trip.status}
+                                            <div className='absolute bottom-2 left-2 z-20 flex items-center gap-1.5'>
+                                                <span className={`px-2.5 py-1 rounded-md text-[9px] font-urbanist font-bold uppercase tracking-widest ${trip.isPublic ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-white/10 text-gray-300 border border-white/20'}`}>
+                                                    {trip.isPublic ? 'Public' : 'Private'}
                                                 </span>
                                             </div>
                                         </div>

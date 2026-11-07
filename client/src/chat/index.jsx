@@ -53,11 +53,7 @@ function Chat() {
             setLoadingTrips(true);
             const fetchData = async () => {
                 try {
-                    const endpoints = ['/bookings/user-bookings'];
-                    if (user.role === 'organiser' || user.role === 'admin') {
-                        endpoints.push('/organiser/my-managed-trips');
-                    }
-
+                    const endpoints = ['/bookings/user-bookings', '/organiser/my-managed-trips'];
                     const responses = await Promise.all(endpoints.map(e => api.get(e)));
 
                     const bookings = responses[0].data
