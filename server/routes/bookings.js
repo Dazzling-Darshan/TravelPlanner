@@ -14,6 +14,27 @@ router.post("/join", verifyToken, async (req, res) => {
     try {
         const { destination, tripId, hotelId, hotelName, hotelImage, hotelAddress, price } = req.body;
 
+        // If linked to a specific trip, verify privacy and eligibility
+        let targetTrip = null;
+        if (tripId) {
+            const Trip = await import("../models/Trip.js").then(m => m.default);
+            targetTrip = await Trip.findById(tripId).populate('userId', 'role');
+            if (!targetTrip) {
+                return res.status(404).json({ message: "Trip not found" });
+            }
+
+            // Privacy check: travelers' personal trips cannot be joined
+            const isOrganiserTrip = targetTrip.userId?.role === 'organiser';
+            if (!targetTrip.isPublic || !isOrganiserTrip) {
+                return res.status(403).json({ message: "This is a private personal trip and cannot be joined." });
+            }
+
+            const tripOwnerId = targetTrip.userId?._id ? targetTrip.userId._id.toString() : targetTrip.userId.toString();
+            if (tripOwnerId === req.user.id.toString()) {
+                return res.status(400).json({ message: "You cannot join your own trip." });
+            }
+        }
+
         // Check if already requested for this specific trip
         const existing = await Booking.findOne({
             userId: req.user.id,
@@ -50,19 +71,15 @@ router.post("/join", verifyToken, async (req, res) => {
         const io = req.app.get('io');
 
         // Always notify Organiser if exists
-        if (tripId) {
-            const Trip = await import("../models/Trip.js").then(m => m.default);
-            const trip = await Trip.findById(tripId);
-            if (trip) {
-                const notif = new Notification({
-                    userId: trip.userId,
-                    type: "booking_request",
-                    message: `New join request from ${currentUser.username} for your trip to ${destination}`,
-                    link: `/organiser`
-                });
-                await notif.save();
-                if (io) io.to(`user_${trip.userId}`).emit("new_notification", notif);
-            }
+        if (targetTrip) {
+            const notif = new Notification({
+                userId: targetTrip.userId._id || targetTrip.userId,
+                type: "booking_request",
+                message: `New join request from ${currentUser.username} for your trip to ${destination}`,
+                link: `/organiser`
+            });
+            await notif.save();
+            if (io) io.to(`user_${targetTrip.userId._id || targetTrip.userId}`).emit("new_notification", notif);
         }
 
         res.status(201).json(newBooking);
@@ -138,6 +155,27 @@ router.get("/trip/:tripId/members", verifyToken, async (req, res) => {
     }
 
     try {
+        const Trip = await import("../models/Trip.js").then(m => m.default);
+        const trip = await Trip.findById(tripId).populate('userId', 'role');
+        if (!trip) {
+            return res.status(404).json({ message: "Trip not found" });
+        }
+
+        const isPublicOrganiserTrip = trip.isPublic && trip.userId?.role === 'organiser';
+        const tripOwnerId = trip.userId?._id ? trip.userId._id.toString() : trip.userId.toString();
+        const isOwner = tripOwnerId === req.user.id.toString();
+
+        if (!isPublicOrganiserTrip && !isOwner) {
+            const isApproved = await Booking.findOne({
+                tripId: tripId,
+                userId: req.user.id,
+                status: "approved"
+            });
+            if (!isApproved) {
+                return res.status(403).json({ message: "Access denied to private trip members." });
+            }
+        }
+
         const members = await Booking.find({
             tripId: tripId,
             status: "approved"

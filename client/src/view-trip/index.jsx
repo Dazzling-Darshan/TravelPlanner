@@ -56,9 +56,10 @@ export default function ViewTrip() {
         console.error("Error fetching trip:", error);
         toast({
           variant: 'destructive',
-          title: 'Error',
-          description: 'Failed to load trip details.'
+          title: error.response?.status === 403 ? 'Private Trip' : 'Error',
+          description: error.response?.data?.message || 'Failed to load trip details.'
         });
+        setTrip(null);
       } finally {
         setLoading(false);
       }
@@ -160,13 +161,13 @@ export default function ViewTrip() {
         <div className="w-16 h-16 mx-auto mb-6 bg-white/5 rounded-2xl flex items-center justify-center border border-white/10">
           <Globe className="w-8 h-8 text-gray-400" />
         </div>
-        <h1 className="text-[24px] font-urbanist font-bold text-white mb-3 tracking-tight">No Trip Found</h1>
-        <p className="text-gray-400 font-inter text-[14px] mb-8 leading-relaxed">Please generate a trip first to view your itinerary.</p>
+        <h1 className="text-[24px] font-urbanist font-bold text-white mb-3 tracking-tight">Private or Unavailable</h1>
+        <p className="text-gray-400 font-inter text-[14px] mb-8 leading-relaxed">This trip is strictly private to its creator or no longer exists.</p>
         <Link
-          to="/create-trip"
+          to="/explore"
           className="inline-flex items-center justify-center h-12 px-8 bg-white text-black font-inter font-bold rounded-lg hover:bg-gray-200 transition-colors w-full"
         >
-          Create New Trip
+          Explore Public Trips
         </Link>
       </div>
     </div>
@@ -186,7 +187,7 @@ export default function ViewTrip() {
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-white/5 border border-white/10 mb-6 backdrop-blur-md">
                   <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
                   <span className="text-[10px] font-urbanist font-bold uppercase tracking-[0.2em] text-gray-300">
-                    AI Optimized Intelligence
+                    {trip.isPublic ? "Public Community Expedition" : "Private Personal Itinerary"}
                   </span>
                 </div>
 
@@ -283,9 +284,13 @@ export default function ViewTrip() {
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                     <Users className="w-4 h-4 text-gray-400" />
-                    <h3 className="text-[20px] sm:text-[24px] font-urbanist font-bold text-white tracking-tight">Traveler Community</h3>
+                    <h3 className="text-[20px] sm:text-[24px] font-urbanist font-bold text-white tracking-tight">
+                      {trip.isPublic ? "Traveler Community" : "Personal Expedition"}
+                    </h3>
                   </div>
-                  <p className="text-[12px] sm:text-[13px] font-inter text-gray-500">Join {members.length} other adventurers</p>
+                  <p className="text-[12px] sm:text-[13px] font-inter text-gray-500">
+                    {trip.isPublic ? `Join ${members.length} other adventurers` : "Private personal itinerary"}
+                  </p>
                 </div>
 
                 <div className="flex -space-x-3">
@@ -337,8 +342,12 @@ export default function ViewTrip() {
                 ) : (
                   <div className="col-span-full py-16 flex flex-col items-center justify-center text-center">
                     <Sparkles className="w-8 h-8 text-white/20 mb-4" />
-                    <h4 className="font-urbanist font-bold text-[18px] text-white mb-2">Be the First Adventurer</h4>
-                    <p className="text-gray-500 font-inter text-[13px] max-w-[240px]">This trip is fresh out of the AI engine. Claim your spot now!</p>
+                    <h4 className="font-urbanist font-bold text-[18px] text-white mb-2">
+                      {trip.isPublic ? "Be the First Adventurer" : "Personal Travel Plan"}
+                    </h4>
+                    <p className="text-gray-500 font-inter text-[13px] max-w-[280px]">
+                      {trip.isPublic ? "This trip is fresh out of the AI engine. Claim your spot now!" : "This itinerary is private and only visible to your account."}
+                    </p>
                   </div>
                 )}
               </div>
@@ -381,7 +390,19 @@ export default function ViewTrip() {
 
                 <p className="text-[10px] font-inter font-bold uppercase tracking-[0.2em] text-gray-500 mb-6">Your Status</p>
 
-                {bookingStatus === 'approved' ? (
+                {!trip.isPublic ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-4 mb-2">
+                      <div className="w-12 h-12 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center">
+                        <Shield className="w-6 h-6 text-emerald-400" />
+                      </div>
+                      <div>
+                        <p className="text-[18px] font-urbanist font-bold text-white">Private Itinerary</p>
+                        <p className="text-[12px] font-inter text-gray-400">Strictly personal to your account.</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : bookingStatus === 'approved' ? (
                   <div className="space-y-6">
                     <div className="flex items-center gap-4 mb-4">
                       <div className="w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center justify-center">
@@ -502,7 +523,7 @@ export default function ViewTrip() {
 
               <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-4 w-full">
 
-                {bookingStatus === 'approved' && (
+                {trip.isPublic && bookingStatus === 'approved' && (
                   <Link
                     to={`/chat?tripId=${id}`}
                     className="h-12 px-8 bg-white hover:bg-gray-200 text-black font-inter font-bold rounded-lg transition-colors flex items-center justify-center gap-2 w-full sm:w-auto"

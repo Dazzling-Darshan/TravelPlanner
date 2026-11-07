@@ -2,12 +2,12 @@ import express from "express";
 import Trip from "../models/Trip.js";
 import Booking from "../models/Booking.js";
 import Notification from "../models/Notification.js";
-import { verifyOrganiser } from "../middleware/authMiddleware.js";
+import { verifyToken } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
 // GET ORGANISER TRIPS
-router.get("/my-managed-trips", verifyOrganiser, async (req, res) => {
+router.get("/my-managed-trips", verifyToken, async (req, res) => {
     try {
         const trips = await Trip.find({
             userId: req.user.id
@@ -19,7 +19,7 @@ router.get("/my-managed-trips", verifyOrganiser, async (req, res) => {
 });
 
 // GET JOIN REQUESTS FOR ORGANISER
-router.get("/join-requests", verifyOrganiser, async (req, res) => {
+router.get("/join-requests", verifyToken, async (req, res) => {
     try {
         const myTrips = await Trip.find({ userId: req.user.id }).select('_id');
         const tripIds = myTrips.map(t => t._id);
@@ -39,7 +39,7 @@ router.get("/join-requests", verifyOrganiser, async (req, res) => {
 });
 
 // APPROVE/REJECT JOIN REQUEST (BY ORGANISER)
-router.put("/requests/:id/validate", verifyOrganiser, async (req, res) => {
+router.put("/requests/:id/validate", verifyToken, async (req, res) => {
     try {
         const { status } = req.body; // approved, rejected
         const booking = await Booking.findById(req.params.id).populate('tripId');

@@ -58,13 +58,15 @@ app.use(cors({
     credentials: true
 }));
 
+const MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URI;
+
 // Session Middleware
 const sessionMiddleware = session({
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     store: MongoStore.create({
-        mongoUrl: process.env.MONGO_URI,
+        mongoUrl: MONGO_URI,
         collectionName: 'sessions',
         ttl: 14 * 24 * 60 * 60 // 14 days
     }),
@@ -244,11 +246,26 @@ io.on("connection", (socket) => {
 });
 
 // Database Connection
-mongoose.connect(process.env.MONGO_URI)
-    .then(() => {
+mongoose.connect(MONGO_URI)
+    .then(async () => {
         console.log("✅ MongoDB Connected");
         console.log("DB Name:", mongoose.connection.name);
         console.log("Ready State:", mongoose.connection.readyState);
+
+        // Privacy migration safeguard: ensure existing trips created by non-organisers are private
+        try {
+            const nonOrganisers = await User.find({ role: { $ne: "organiser" } }).select("_id");
+            const nonOrganiserIds = nonOrganisers.map(u => u._id);
+            const migrationResult = await Trip.updateMany(
+                { userId: { $in: nonOrganiserIds }, isPublic: { $ne: false } },
+                { $set: { isPublic: false } }
+            );
+            if (migrationResult.modifiedCount > 0) {
+                console.log(`🔒 Privacy Migration: Marked ${migrationResult.modifiedCount} existing traveler trips as private.`);
+            }
+        } catch (migErr) {
+            console.error("Privacy migration check error:", migErr);
+        }
     })
     .catch((err) => console.error("❌ MongoDB Connection Error:", err));
 

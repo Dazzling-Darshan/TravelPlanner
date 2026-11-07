@@ -53,8 +53,8 @@ const OrganiserDashboard = () => {
     }, [toast]);
 
     useEffect(() => {
-        if (!user || (user.role !== 'organiser' && user.role !== 'admin')) {
-            navigate('/');
+        if (!user) {
+            navigate('/login');
             return;
         }
         fetchOrganiserData();
