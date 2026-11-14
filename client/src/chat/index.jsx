@@ -16,6 +16,7 @@ function Chat() {
     const [accessDenied, setAccessDenied] = useState(false);
     const [approvedTrips, setApprovedTrips] = useState([]);
     const [loadingTrips, setLoadingTrips] = useState(false);
+    const [activeDestination, setActiveDestination] = useState("");
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const messagesEndRef = useRef(null);
     const fileInputRef = useRef(null);
@@ -43,54 +44,76 @@ function Chat() {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    // Load available chat channels
+    useEffect(() => {
+        if (!user) return;
+        let isMounted = true;
+        setLoadingTrips(true);
+
+        const fetchChannels = async () => {
+            try {
+                const endpoints = ['/bookings/user-bookings'];
+                if (user?.role === 'organiser') {
+                    endpoints.push('/organiser/my-managed-trips');
+                } else {
+                    endpoints.push('/trips/user-trips');
+                }
+
+                const responses = await Promise.all(endpoints.map(e => api.get(e)));
+
+                const bookings = (responses[0]?.data || [])
+                    .filter(b => b.status === 'approved' && b.tripId)
+                    .map(b => ({
+                        _id: b._id,
+                        chatId: b.tripId._id || b.tripId,
+                        destination: b.destination,
+                        image: b.hotelImage || b.tripId?.tripData?.hotels?.[0]?.imageUrl,
+                        subtext: b.hotelName || 'Joined Community',
+                        role: 'Traveler'
+                    }));
+
+                let managed = [];
+                if (responses[1]?.data) {
+                    const isOrg = user?.role === 'organiser';
+                    managed = responses[1].data.map(t => ({
+                        _id: t._id,
+                        chatId: t._id,
+                        destination: t.destination,
+                        image: t.tripData?.hotels?.[0]?.imageUrl || t.tripData?.locationInfo?.photoUrl,
+                        subtext: isOrg ? 'Your Managed Trip' : 'Your Personal Trip',
+                        role: isOrg ? 'Organiser' : 'Creator'
+                    }));
+                }
+
+                const allTrips = [...managed, ...bookings];
+                const uniqueTrips = Array.from(new Map(allTrips.map(item => [item.chatId, item])).values());
+                if (isMounted) setApprovedTrips(uniqueTrips);
+            } catch (err) {
+                console.error("Failed to fetch chat selection data", err);
+            } finally {
+                if (isMounted) setLoadingTrips(false);
+            }
+        };
+
+        fetchChannels();
+        return () => { isMounted = false; };
+    }, [user]);
+
+    // Handle Active Trip messages & socket connection
     useEffect(() => {
         if (!user) {
             navigate('/login');
             return;
         }
 
-        if (!tripId) {
-            setLoadingTrips(true);
-            const fetchData = async () => {
-                try {
-                    const endpoints = ['/bookings/user-bookings', '/organiser/my-managed-trips'];
-                    const responses = await Promise.all(endpoints.map(e => api.get(e)));
+        if (!tripId) return;
 
-                    const bookings = responses[0].data
-                        .filter(b => b.status === 'approved' && b.tripId)
-                        .map(b => ({
-                            _id: b._id,
-                            chatId: b.tripId._id || b.tripId,
-                            destination: b.destination,
-                            image: b.hotelImage || b.tripId?.tripData?.hotels?.[0]?.imageUrl,
-                            subtext: b.hotelName || 'Joined Community',
-                            role: 'Traveler'
-                        }));
-
-                    let managed = [];
-                    if (responses[1]) {
-                        managed = responses[1].data.map(t => ({
-                            _id: t._id,
-                            chatId: t._id,
-                            destination: t.destination,
-                            image: t.tripData?.hotels?.[0]?.imageUrl || t.tripData?.locationInfo?.photoUrl,
-                            subtext: 'Your Managed Trip',
-                            role: 'Organiser'
-                        }));
-                    }
-
-                    const allTrips = [...managed, ...bookings];
-                    const uniqueTrips = Array.from(new Map(allTrips.map(item => [item.chatId, item])).values());
-                    setApprovedTrips(uniqueTrips);
-                } catch (err) {
-                    console.error("Failed to fetch chat selection data", err);
-                } finally {
-                    setLoadingTrips(false);
-                }
-            };
-            fetchData();
-            return;
-        }
+        // Fetch destination name directly for header display
+        api.get(`/trips/${tripId}`)
+            .then(res => {
+                if (res.data?.destination) setActiveDestination(res.data.destination);
+            })
+            .catch(() => {});
 
         api.get(`/messages/${tripId}`).then((response) => {
             const history = response.data.map(msg => ({
@@ -112,7 +135,6 @@ function Chat() {
         newSocket.on("connect", () => newSocket.emit("join_chat", { tripId }));
         setSocket(newSocket);
         return () => newSocket.disconnect();
-
     }, [user, navigate, tripId]);
 
     useEffect(() => {
@@ -259,7 +281,7 @@ function Chat() {
             {/* Thread Sidebar - For Large screens only */}
             <aside className="hidden lg:flex w-80 bg-[#0a0a0a] border-r border-white/5 flex-col h-full shrink-0">
                 <div className="p-8 border-b border-white/5 flex items-center justify-between">
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.3em]">Channel: {approvedTrips.find(t => t.chatId === tripId)?.destination || 'Active'}</h3>
+                    <h3 className="text-[10px] font-black uppercase tracking-[0.3em]">Channel: {approvedTrips.find(t => t.chatId === tripId)?.destination || activeDestination || 'Active'}</h3>
                     <div className="flex gap-1">
                         <div className="w-1.5 h-1.5 bg-emerald-500 rounded-none animate-pulse" />
                         <div className="w-1.5 h-1.5 bg-emerald-500 rounded-none animate-pulse delay-75" />
@@ -298,7 +320,7 @@ function Chat() {
                         </div>
                         <div className="min-w-0">
                             <h3 className="text-[11px] md:text-[14px] font-urbanist font-black uppercase tracking-widest truncate">
-                                {approvedTrips.find(t => t.chatId === tripId)?.destination || "COMM FEED"}
+                                {approvedTrips.find(t => t.chatId === tripId)?.destination || activeDestination || "COMM FEED"}
                             </h3>
                             <div className="flex items-center gap-2">
                                 <span className="text-[8px] md:text-[9px] font-black text-emerald-500 uppercase tracking-widest shrink-0">Active</span>

@@ -44,13 +44,17 @@ function Header() {
             withCredentials: true
         });
 
-        newSocket.on(`notification_${user.id}`, (newNotif) => {
+        const handleIncomingNotification = (newNotif) => {
             setNotifications(prev => [newNotif, ...prev]);
             toast({
                 title: "New Notification",
                 description: newNotif.message,
             });
-        });
+        };
+
+        newSocket.on("notification_new", handleIncomingNotification);
+        newSocket.on("new_notification", handleIncomingNotification);
+        newSocket.on(`notification_${user.id}`, handleIncomingNotification);
 
         return () => {
             isMounted = false;

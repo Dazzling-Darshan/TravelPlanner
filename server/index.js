@@ -58,7 +58,10 @@ app.use(cors({
     credentials: true
 }));
 
-const MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URI;
+const MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URI || "mongodb://localhost:27017/travel-around";
+if (!process.env.MONGO_URI && !process.env.MONGODB_URI) {
+    console.log("ℹ️  NOTICE: No MONGO_URI provided in environment. Defaulting to mongodb://localhost:27017/travel-around");
+}
 
 // Session Middleware
 const sessionMiddleware = session({

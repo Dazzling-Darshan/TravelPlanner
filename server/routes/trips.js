@@ -4,7 +4,7 @@ import Trip from "../models/Trip.js";
 import User from "../models/User.js";
 import Booking from "../models/Booking.js";
 import Message from "../models/Message.js";
-import jwt from "jsonwebtoken";
+import Notification from "../models/Notification.js";
 import { verifyToken } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -98,6 +98,10 @@ router.get("/", async (req, res) => {
 router.put("/:id", verifyToken, async (req, res) => {
     try {
         const { id } = req.params;
+        if (!id || id.length < 24 || !/^[0-9a-fA-F]{24}$/.test(id)) {
+            return res.status(400).json({ message: "Invalid trip ID format" });
+        }
+
         const { destination, budget, duration, capacity, price, status, terms, packageNotes, isBooked, isPublic, selectedHotel, startDate, endDate } = req.body;
 
         const trip = await Trip.findById(id);
@@ -194,6 +198,9 @@ router.get("/:id", async (req, res) => {
 // DELETE TRIP (ADMIN OR OWNER)
 router.delete("/:id", verifyToken, async (req, res) => {
     const tripId = req.params.id;
+    if (!tripId || tripId.length < 24 || !/^[0-9a-fA-F]{24}$/.test(tripId)) {
+        return res.status(400).json({ message: "Invalid trip ID format" });
+    }
     const userId = req.user.id;
     const userRole = req.user.role;
 
@@ -226,6 +233,9 @@ router.delete("/:id", verifyToken, async (req, res) => {
         // Cascade delete: Remove all messages for this trip
         const messageDeleteResult = await Message.deleteMany({ tripId: new mongoose.Types.ObjectId(tripId) });
         console.log(`[DELETE_TRIP] Cascade deleted ${messageDeleteResult.deletedCount} messages`);
+
+        // Cascade delete: Remove notifications referencing this trip
+        await Notification.deleteMany({ link: { $regex: tripId } });
 
         // Cleanup: Remove from all users' favorites
         await User.updateMany({}, { $pull: { favorites: tripId } });

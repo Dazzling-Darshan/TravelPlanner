@@ -15,7 +15,7 @@ const UserTripCard = ({ trip, isJoined, bookingStatus }) => {
     const isOwner = React.useMemo(() => {
         if (!user || !trip.userId) return false;
         const tripUid = typeof trip.userId === 'object' ? trip.userId._id : trip.userId;
-        return tripUid === user.id;
+        return tripUid?.toString() === user.id?.toString();
     }, [user, trip.userId]);
 
     const [imgSrc, setImgSrc] = React.useState(

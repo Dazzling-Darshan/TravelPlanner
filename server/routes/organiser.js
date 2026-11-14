@@ -2,12 +2,12 @@ import express from "express";
 import Trip from "../models/Trip.js";
 import Booking from "../models/Booking.js";
 import Notification from "../models/Notification.js";
-import { verifyToken } from "../middleware/authMiddleware.js";
+import { verifyOrganiser } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
 // GET ORGANISER TRIPS
-router.get("/my-managed-trips", verifyToken, async (req, res) => {
+router.get("/my-managed-trips", verifyOrganiser, async (req, res) => {
     try {
         const trips = await Trip.find({
             userId: req.user.id
@@ -19,14 +19,14 @@ router.get("/my-managed-trips", verifyToken, async (req, res) => {
 });
 
 // GET JOIN REQUESTS FOR ORGANISER
-router.get("/join-requests", verifyToken, async (req, res) => {
+router.get("/join-requests", verifyOrganiser, async (req, res) => {
     try {
         const myTrips = await Trip.find({ userId: req.user.id }).select('_id');
         const tripIds = myTrips.map(t => t._id);
 
         const requests = await Booking.find({ tripId: { $in: tripIds } })
             .populate('userId', 'username email avatar')
-            .populate('tripId', 'destination organiserStatus')
+            .populate('tripId', 'destination organiserStatus capacity')
             .sort({ createdAt: -1 });
 
         // Filter out any bookings where tripId populate failed (orphaned or deleted trips)
@@ -39,16 +39,34 @@ router.get("/join-requests", verifyToken, async (req, res) => {
 });
 
 // APPROVE/REJECT JOIN REQUEST (BY ORGANISER)
-router.put("/requests/:id/validate", verifyToken, async (req, res) => {
+router.put("/requests/:id/validate", verifyOrganiser, async (req, res) => {
     try {
-        const { status } = req.body; // approved, rejected
-        const booking = await Booking.findById(req.params.id).populate('tripId');
+        const { id } = req.params;
+        if (!id || id.length < 24 || !/^[0-9a-fA-F]{24}$/.test(id)) {
+            return res.status(400).json({ message: "Invalid request ID format" });
+        }
+
+        const { status } = req.body; // approved, rejected, revoked
+        const booking = await Booking.findById(id).populate('tripId');
 
         if (!booking) return res.status(404).json({ message: "Request not found" });
 
         // Security check: Does this booking belong to a trip owned by the current user?
-        if (booking.tripId.userId.toString() !== req.user.id) {
+        if (!booking.tripId || booking.tripId.userId.toString() !== req.user.id) {
             return res.status(403).json({ message: "Unauthorized: You don't own this trip" });
+        }
+
+        // Domain Rule: Capacity constraint validation when approving a request
+        if (status === 'approved') {
+            const trip = booking.tripId;
+            const capacity = trip.capacity || 10;
+            const approvedCount = await Booking.countDocuments({
+                tripId: trip._id,
+                status: "approved"
+            });
+            if (approvedCount >= capacity) {
+                return res.status(400).json({ message: `Cannot approve: Trip capacity of ${capacity} has been reached.` });
+            }
         }
 
         booking.status = status;

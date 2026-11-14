@@ -50,7 +50,8 @@ export default function ViewTrip() {
             terms: data.terms || "",
             packageNotes: data.packageNotes || ""
           });
-          setTripOwnerId(data.userId?._id || data.userId);
+          const ownerIdStr = data.userId?._id ? data.userId._id.toString() : data.userId?.toString();
+          setTripOwnerId(ownerIdStr);
         }
       } catch (error) {
         console.error("Error fetching trip:", error);
@@ -70,17 +71,31 @@ export default function ViewTrip() {
   const fetchMembers = useCallback(async () => {
     if (!id) return;
     try {
-      const membersRes = await api.get(`/bookings/trip/${id}/members`);
-      const tripRes = await api.get(`/trips/${id}`);
+      const [membersRes, tripRes] = await Promise.all([
+        api.get(`/bookings/trip/${id}/members`),
+        api.get(`/trips/${id}`)
+      ]);
       const creator = tripRes.data?.userId;
 
       if (creator) {
-        const ownerRes = await api.get(`/users/${creator}`);
+        const creatorId = creator._id ? creator._id.toString() : creator.toString();
+        let creatorUser = typeof creator === 'object' && creator.username ? creator : null;
+        if (!creatorUser) {
+          try {
+            const ownerRes = await api.get(`/users/${creatorId}`);
+            creatorUser = ownerRes.data;
+          } catch {
+            creatorUser = { username: "Host", role: "organiser" };
+          }
+        }
         const owner = {
-          userId: ownerRes.data,
+          userId: creatorUser,
           isOwner: true
         };
-        const filteredMembers = membersRes.data.filter(m => m.userId?._id !== creator);
+        const filteredMembers = membersRes.data.filter(m => {
+          const mUid = m.userId?._id ? m.userId._id.toString() : m.userId?.toString();
+          return mUid !== creatorId;
+        });
         setMembers([owner, ...filteredMembers]);
       } else {
         setMembers(membersRes.data);
@@ -95,7 +110,9 @@ export default function ViewTrip() {
       const { data } = await api.get(`/bookings/status/id/${id}`);
       if (data) {
         const tripRes = await api.get(`/trips/${id}`);
-        if (tripRes.data?.userId === user?.id) {
+        const ownerId = tripRes.data?.userId?._id ? tripRes.data.userId._id.toString() : tripRes.data?.userId?.toString();
+        const currentUserId = user?.id?.toString();
+        if (ownerId && currentUserId && ownerId === currentUserId) {
           setBookingStatus('approved');
         } else {
           setBookingStatus(data.status || 'none');
@@ -247,8 +264,8 @@ export default function ViewTrip() {
       <div className="px-4 sm:px-10 md:px-16 lg:px-24 xl:px-32 py-10 sm:py-16">
         <div className="max-w-[1280px] mx-auto space-y-10 sm:space-y-16">
 
-          {/* Organiser Management Bar */}
-          {user?.id === tripOwnerId && (
+          {/* Organiser Management Bar - Shown exclusively to the Organiser Host */}
+          {user?.id?.toString() === tripOwnerId?.toString() && user?.role === 'organiser' && (
             <div className="bg-[#0a0a0a] border border-emerald-500/30 p-6 rounded-[20px] flex flex-col md:flex-row items-center justify-between gap-6 shadow-[0_0_20px_rgba(16,185,129,0.05)] relative overflow-hidden">
               <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500" />
               <div className="flex items-center gap-4 sm:gap-5 relative z-10">
@@ -323,7 +340,7 @@ export default function ViewTrip() {
                         </div>
                       </div>
 
-                      {user?.id === tripOwnerId && !member.isOwner && (
+                      {user?.id?.toString() === tripOwnerId?.toString() && !member.isOwner && (
                         <button
                           onClick={async () => {
                             if (window.confirm(`Kick ${member.userId?.username}?`)) {

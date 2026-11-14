@@ -4,11 +4,13 @@ import React, { createContext, useContext, useState } from "react";
 
 const ToastContext = createContext(null);
 
+let toastIdCounter = 0;
+
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
 
-  const toast = (argsOrTitle, options = {}) => {
-    const id = options.id || (typeof argsOrTitle === 'object' && argsOrTitle.id) || Date.now();
+  const toast = React.useCallback((argsOrTitle, options = {}) => {
+    const id = options.id || (typeof argsOrTitle === 'object' && argsOrTitle.id) || (++toastIdCounter);
 
     let title = argsOrTitle;
     let description = options.description;
@@ -37,14 +39,18 @@ export function ToastProvider({ children }) {
     }, duration ?? 4000);
 
     return { id, dismiss: () => clearTimeout(timer) };
-  };
+  }, []);
+
+  toast.loading = (message, options = {}) => toast(message, { ...options, type: "loading" });
+  toast.error = (message, options = {}) => toast(message, { ...options, type: "error" });
+  toast.success = (message, options = {}) => toast(message, { ...options, type: "success" });
 
   return (
     <ToastContext.Provider value={{
       toast,
-      loading: (message, options = {}) => toast(message, { ...options, type: "loading" }),
-      error: (message, options = {}) => toast(message, { ...options, type: "error" }),
-      success: (message, options = {}) => toast(message, { ...options, type: "success" })
+      loading: toast.loading,
+      error: toast.error,
+      success: toast.success
     }}>
       {children}
 

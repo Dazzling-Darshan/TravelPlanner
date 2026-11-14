@@ -57,8 +57,13 @@ const OrganiserDashboard = () => {
             navigate('/login');
             return;
         }
+        if (user.role !== 'organiser') {
+            toast({ title: "Access Denied", description: "Organiser privileges required to access the tactical panel.", variant: "destructive" });
+            navigate('/');
+            return;
+        }
         fetchOrganiserData();
-    }, [user, navigate, fetchOrganiserData]);
+    }, [user, navigate, fetchOrganiserData, toast]);
 
     const handleRequestAction = async (requestId, status) => {
         try {

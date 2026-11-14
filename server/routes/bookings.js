@@ -17,6 +17,9 @@ router.post("/join", verifyToken, async (req, res) => {
         // If linked to a specific trip, verify privacy and eligibility
         let targetTrip = null;
         if (tripId) {
+            if (typeof tripId !== 'string' || tripId.length < 24 || !/^[0-9a-fA-F]{24}$/.test(tripId)) {
+                return res.status(400).json({ message: "Invalid trip ID format" });
+            }
             const Trip = await import("../models/Trip.js").then(m => m.default);
             targetTrip = await Trip.findById(tripId).populate('userId', 'role');
             if (!targetTrip) {
@@ -32,6 +35,12 @@ router.post("/join", verifyToken, async (req, res) => {
             const tripOwnerId = targetTrip.userId?._id ? targetTrip.userId._id.toString() : targetTrip.userId.toString();
             if (tripOwnerId === req.user.id.toString()) {
                 return res.status(400).json({ message: "You cannot join your own trip." });
+            }
+
+            // Capacity constraint
+            const approvedCount = await Booking.countDocuments({ tripId: targetTrip._id, status: "approved" });
+            if (approvedCount >= (targetTrip.capacity || 10)) {
+                return res.status(400).json({ message: "This trip is currently at full capacity." });
             }
         }
 
@@ -79,7 +88,7 @@ router.post("/join", verifyToken, async (req, res) => {
                 link: `/organiser`
             });
             await notif.save();
-            if (io) io.to(`user_${targetTrip.userId._id || targetTrip.userId}`).emit("new_notification", notif);
+            if (io) io.to(`user_${targetTrip.userId._id || targetTrip.userId}`).emit("notification_new", notif);
         }
 
         res.status(201).json(newBooking);
@@ -92,9 +101,13 @@ router.post("/join", verifyToken, async (req, res) => {
 // Check Status for a specific trip/user
 router.get("/status/id/:tripId", verifyToken, async (req, res) => {
     try {
+        const { tripId } = req.params;
+        if (!tripId || tripId.length < 24 || !/^[0-9a-fA-F]{24}$/.test(tripId)) {
+            return res.status(400).json({ message: "Invalid trip ID format" });
+        }
         const booking = await Booking.findOne({
             userId: req.user.id,
-            tripId: req.params.tripId
+            tripId: tripId
         });
         res.json(booking || { status: "none" });
     } catch (err) {
